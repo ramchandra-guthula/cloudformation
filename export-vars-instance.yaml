@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template depends on vpc_stack.yaml tempalte and creates instance
+Parameters:
+  Privatekey:
+    Description: Private key name
+    Type: String
+Resources:
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      AvailabilityZone: !Select 
+        - 0
+        - 'Fn::GetAZs': !Ref 'AWS::Region'
+      ImageId: ami-0323c3dd2da7fb37d
+      InstanceType: t2.micro
+      KeyName: !Ref Privatekey
+      SubnetId:
+        'Fn::ImportValue': !Sub '${AWS::Region}-vpcstack-PublicSubnet0'
+      SecurityGroups: 
+      - !Ref WebserverSecurityGroup
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+          files:
+            "/var/www/html/index.html":
+              content: |
+               <html>
+                 <body>
+                   <h1>Welcome to Cloudformation template</h1>
+                   <h2>sample for metadata</h2>
+                   <p>Hello World!</p>
+                 </body>
+                </html>
+              mode: '000644'
+              owner: root
+              group: root
+          services:
+            sysvinit:
+              httpd:
+                enabled: 'true'
+                ensureRunning: 'true'
+      Tags:
+      - Key: Name
+        Value: webserver-cft
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash -ex
+           yum update -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v -s ${AWS::StackName} -r EC2Instance --region ${AWS::Region}
+  WebserverSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: hello-world-webserver
+      VpcId:
+        'Fn::ImportValue': !Sub '${AWS::Region}-vpcstack-VPC'
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+
+Outputs:
+  HelloWorldURL:
+    Description: Public ip address of your instance.
+    Value: !Sub 'http://${EC2Instance.PublicIp}'
+  PublicDNS:
+    Description: Public DNS name
+    Value: !Sub '${EC2Instance.PublicDnsName}'
+

@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+ myELB:
+   Type: AWS::ElasticLoadBalancing::LoadBalancer
+   Properties:
+     Subnets: ['subnet-09ff3440e6b241b71', 'subnet-09ff3440e6b241b71']
+     Listeners:
+       - LoadBalancerPort: '80'
+         InstancePort: '80'
+         Protocol: HTTP
+ myELBIngressGroup:
+   Type: AWS::EC2::SecurityGroup
+   Properties:
+     GroupDescription: ELB ingress group
+     SecurityGroupIngress:
+       - IpProtocol: tcp
+         FromPort: '80'
+         ToPort: '80'
+         SourceSecurityGroupOwnerId: !GetAtt myELB.SourceSecurityGroup.OwnerAlias
+         SourceSecurityGroupName: !GetAtt myELB.SourceSecurityGroup.GroupName
